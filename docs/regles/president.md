@@ -241,10 +241,11 @@ Avant chaque nouvelle manche (à partir de la 2ᵉ) :
   forcée, seule la carte égale reste jouable. Quand une **fermeture à la volée**
   est possible (option activée), seule la carte qui ferme est mise en avant et le
   bandeau affiche « À la volée — posez la carte pour fermer le pli ! ».
-- **Sélection** : dès que vous sélectionnez une ou plusieurs cartes, les **autres
-  deviennent transparentes** (comme les injouables) et un petit bouton **« Poser »**
-  apparaît **juste au-dessus** des cartes choisies (centré). À l'écran d'échange,
-  ce bouton devient **« Donner »**.
+- **Sélection** : un petit bouton **« Poser »** apparaît **juste au-dessus** des
+  cartes choisies (centré). Les cartes que vous **pouvez encore jouer** restent
+  nettes ; seules les **injouables** sont grisées. À l'**écran d'échange**, ce
+  bouton devient **« Donner »** et les cartes non concernées deviennent
+  transparentes (mise au point sur le don obligatoire).
 
 ## Commandes
 - **Clic** sur une carte : la (dé)sélectionner (même valeur).

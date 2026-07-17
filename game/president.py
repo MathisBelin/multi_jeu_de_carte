@@ -1050,14 +1050,15 @@ class PresidentScene(Scene):
 
     def _draw_human_hand(self, surface):
         legal = self._active_legal_ranks()
-        # quand des cartes sont sélectionnées, les autres deviennent
-        # transparentes (même effet que les cartes injouables) pour la mise au point
-        has_sel = bool(self.selected)
+        # À l'ÉCHANGE : les cartes non sélectionnées deviennent transparentes
+        # (mise au point sur le don). En jeu, on ne grise QUE les cartes
+        # injouables — jamais les cartes qu'on peut encore jouer.
         for c, rect in self.hand_layout():
             surf = self.renderer.face(c)
             illegal = (legal is not None and self.g.top_combo is not None
                        and c.rank not in legal)
-            unsel = has_sel and c not in self.selected
+            unsel = (self.phase == "exchange" and self.selected
+                     and c not in self.selected)
             if illegal or unsel:
                 surf = surf.copy()
                 surf.fill((120, 120, 130, 120), special_flags=pygame.BLEND_RGBA_MULT)

@@ -232,11 +232,12 @@ empiéter sur les cartes jouées ni la main. **Repliable** : l'**en-tête**
 lissé dans `update`, dévoilement par clip depuis le haut + fondu `BLEND_RGBA_MULT`).
 Fond volontairement **translucide** (alpha faible) pour ne pas masquer le feutre.
 
-**Sélection : mise au point + bouton flottant** — dans `_draw_human_hand`, dès
-qu'au moins une carte est sélectionnée, les **autres cartes deviennent
-transparentes** (même `BLEND_RGBA_MULT` que les cartes injouables). Un petit
-bouton **flottant** (`btn_place`, positionné par `_floating_button` /
-`_place_floating`) apparaît **centré au-dessus** de la/des carte(s) sélectionnée(s) :
+**Sélection : mise au point + bouton flottant** — dans `_draw_human_hand`, **à
+l'écran d'échange** les cartes non sélectionnées deviennent **transparentes**
+(même `BLEND_RGBA_MULT` que les injouables) pour concentrer sur le don ; **en jeu**
+on ne grise **que** les cartes **injouables** (jamais celles qu'on peut encore
+jouer). Un petit bouton **flottant** (`btn_place`, positionné par `_floating_button`
+/ `_place_floating`) apparaît **centré au-dessus** de la/des carte(s) sélectionnée(s) :
 « **Poser** » à son tour (→ `human_play`) ou « **Donner** » à l'échange
 (→ `finish_exchange`). Le Pouilleux a le même bouton flottant « **Défausser** »
 (`btn_discard_float` / `_place_discard_float`) au-dessus de la paire cochée en
@@ -443,10 +444,11 @@ avec `pygame.image.save(app.screen, "out.png")`.
 ---
 
 _Dernière mise à jour : **Bouton flottant « Poser » + mise au point de la
-sélection** (Président & Pouilleux) — les cartes non sélectionnées deviennent
-transparentes (comme les injouables) et un petit bouton centré (« Poser » /
+sélection** (Président & Pouilleux) — un petit bouton centré (« Poser » /
 « Donner » / « Défausser ») s'affiche juste au-dessus des cartes choisies
 (`btn_place` / `_floating_button`, `btn_discard_float` / `_place_discard_float`).
+La transparence des cartes non sélectionnées ne s'applique **qu'à l'échange** ;
+en jeu, seules les cartes injouables restent grisées.
 Auparavant : **Don obligatoire du perdant (Président)** — quand l'humain est Trou
 du cul / Vice-Trou, il donne **lui-même** ses meilleures cartes, imposées et en
 **surbrillance** (verrouillées, pas de triche) via un écran dédié (`give_best` :
