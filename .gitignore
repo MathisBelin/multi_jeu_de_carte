@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environnements virtuels
+.venv/
+venv/
+env/
+
+# Sorties de test / temporaires
+*.tmp
+out.png
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
