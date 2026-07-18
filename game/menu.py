@@ -94,21 +94,23 @@ class MenuScene(Scene):
         self.fs_btn.label = self._fs_label()
 
     def _build(self):
-        cw, ch = 340, 150
-        gap = 30
-        cols = 2
+        cw, ch = 340, 148
+        gap = 26
+        cols = 3
         total_w = cols * cw + (cols - 1) * gap
         left = (C.SCREEN_W - total_w) // 2
-        top = 218
+        top = 214
         specs = [
             ("Solitaire", "Le grand classique en Klondike.",
              C.SPADE, True, self.app.show_solitaire),
-            ("Le Président", "Videz votre main avant les 3 IA.",
+            ("Le Président", "Videz votre main avant les IA.",
              C.HEART, True, self.app.show_president),
             ("Bataille", "Le duel le plus simple (avec jokers).",
              C.SPADE, True, self.app.show_bataille),
             ("Le Pouilleux", "Ne restez pas avec la carte orpheline.",
              C.CLUB, True, self.app.show_pouilleux),
+            ("Le Bouclié", "Boucliers et PV : éliminez les autres.",
+             C.DIAMOND, True, self.app.show_bouclie),
             ("FreeCell", "4 cellules, tout est visible.",
              C.DIAMOND, False, None),
             ("Spider", "Deux jeux, patience exigeante.",

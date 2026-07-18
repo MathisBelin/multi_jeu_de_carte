@@ -33,12 +33,15 @@ Dans les deux cas il reste 51 cartes = 25 paires + 1 orpheline.
   défausse**. Deux moments :
   - **Au début** : une fois vos paires écartées, cliquez **« Prêt »** (le bouton
     ne s'active que lorsqu'il ne vous reste plus aucune paire).
-  - **À votre tour, après avoir pioché** : écartez votre éventuel double, puis
-    cliquez **« Donner »** pour présenter votre main au joueur suivant.
+  - **À votre tour, après avoir pioché** : écartez votre éventuel double,
+    mélangez ou réordonnez votre main si vous le souhaitez, puis cliquez
+    **« Donner »**. Comme le joueur suivant pioche toujours chez vous, ce **seul**
+    clic présente votre main *et* l'autorise à piocher — pas de second « Donner »
+    à cet instant.
 
 ## Mise en place
 
-- **2 à 8 joueurs** (vous + IA), choisis sur l'écran de configuration.
+- **2 à 10 joueurs** (vous + IA), choisis sur l'écran de configuration.
 - Les 51 cartes sont distribuées aussi équitablement que possible (certains
   joueurs ont une carte de plus).
 - Chaque joueur **défausse ses paires** (automatiquement, ou à la main pour vous
@@ -53,9 +56,15 @@ cachée, chez son voisin** (le joueur actif précédent dans l'ordre). Si la car
 piochée complète une paire dans sa main, la paire est défaussée (aussitôt en mode
 automatique ; par vous, avant de cliquer « Donner », en mode manuel).
 
-- **Tour de l'humain** : l'éventail (face cachée) du voisin s'affiche au centre ;
-  vous **cliquez** la carte à piocher.
+- **Tour de l'humain** : les cartes (face cachée) du voisin **viennent se placer
+  devant vous** (petite animation depuis son pod vers la zone centrale) ; vous
+  **cliquez** ensuite la carte à piocher. La carte choisie **vient à vous** et les
+  autres **repartent chez le voisin**.
 - **Tour d'une IA** : elle pioche une carte au hasard.
+
+Les joueurs sont disposés **en cercle** (vous en bas, les autres autour). Le
+**titre** rappelle la version en cours (« Le Pouilleux — Classique » ou
+« — Mystère »).
 
 Un joueur qui vide sa main est **sauvé** et sort du tour. On continue tant qu'il
 reste au moins deux joueurs avec des cartes.
@@ -66,8 +75,9 @@ Votre main **n'est pas triée automatiquement** : c'est vous qui choisissez
 l'ordre de vos cartes, pour que le voisin qui pioche chez vous ne puisse pas
 deviner leur position. **Glissez-déposez** vos cartes pour les réarranger, ou
 cliquez **Mélanger la main** pour un ordre aléatoire. C'est possible **hors de
-votre tour** (au début, et pendant que les autres jouent), mais pas pendant votre
-pioche ni au moment de « Donner » votre défausse. Pendant que vous déplacez une
+votre tour** : au début, pendant que les autres jouent, et **au moment de
+« Donner »** après votre pioche en mode manuel (juste avant que le voisin pioche
+chez vous). Seule votre propre pioche l'interdit. Pendant que vous déplacez une
 carte, l'IA attend.
 
 Pendant le glisser, un **emplacement cible surligné** s'ouvre entre les deux
@@ -81,7 +91,10 @@ pioche**), pour rester tout aussi imprévisibles que vous.
 **Accord avant qu'on pioche chez vous** : lorsqu'un voisin s'apprête à piocher
 dans votre main, le jeu **attend que vous cliquiez « Donner »** avant de lui
 laisser prendre une carte — cela vous laisse le temps de mélanger ou de
-réordonner. Cela vaut dans les deux modes (automatique comme manuel).
+réordonner. Cela vaut dans les deux modes (automatique comme manuel). En mode
+manuel, quand ce voisin est celui qui joue **juste après votre propre tour**, cet
+accord est **fusionné** avec le « Donner » de votre défausse : un seul clic suffit
+(inutile de cliquer « Donner » deux fois de suite).
 
 ## Fin de partie
 

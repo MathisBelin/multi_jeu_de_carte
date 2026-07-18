@@ -47,6 +47,7 @@ class PresidentScene(Scene):
         # configuration
         self.N = 4
         self.equitable = True
+        self.small_roles = "ends"      # <4 joueurs : "ends" (Prés/Trou) ou "vices"
         self.ai_level = "normal"       # "normal" (heuristique) ou "mc" (Monte-Carlo)
         self.a_la_volee = False        # option « à la volée » (fermeture hors-tour)
         self.snap_reactivity = "slow"  # réaction des bots : "none" / "slow" (3 s) / "instant"
@@ -140,16 +141,14 @@ class PresidentScene(Scene):
     def title_for(self, place):
         return self.g.title_for(place)
 
+    _TITLE_COLS = {"Président": (212, 175, 55),
+                   "Vice-Président": (150, 190, 120),
+                   "Vice-Trou": (190, 150, 120),
+                   "Trou du cul": (200, 90, 90)}
+
     def title_col(self, place):
-        if place == 0:
-            return (212, 175, 55)
-        if place == 1:
-            return (150, 190, 120)
-        if place == self.N - 1:
-            return (200, 90, 90)
-        if place == self.N - 2:
-            return (190, 150, 120)
-        return NEUTRAL_COL
+        # Couleur d'après le titre effectif (gère aussi les schémas à < 4 joueurs).
+        return self._TITLE_COLS.get(self.title_for(place), NEUTRAL_COL)
 
     # ------------------------------------------------------------------
     # Boutons
@@ -188,6 +187,9 @@ class PresidentScene(Scene):
         self.btn_dist = ui.Button((cx - 185, 440, 370, 44), self._dist_label(),
                                   self._toggle_dist, self.small,
                                   fill=(72, 96, 120), text_col=C.TEXT_LIGHT)
+        self.btn_small = ui.Button((cx - 185, 490, 370, 44), self._small_label(),
+                                   self._toggle_small, self.small,
+                                   fill=(72, 96, 120), text_col=C.TEXT_LIGHT)
         self.btn_ai = ui.Button((cx - 185, 490, 370, 44), self._ai_label(),
                                 self._toggle_ai, self.small,
                                 fill=(72, 96, 120), text_col=C.TEXT_LIGHT)
@@ -213,6 +215,14 @@ class PresidentScene(Scene):
     def _toggle_dist(self):
         self.equitable = not self.equitable
         self.btn_dist.label = self._dist_label()
+
+    def _small_label(self):
+        return ("Vice-Prés. & Vice-Trou" if self.small_roles == "vices"
+                else "Président & Trou du cul")
+
+    def _toggle_small(self):
+        self.small_roles = "vices" if self.small_roles == "ends" else "ends"
+        self.btn_small.label = self._small_label()
 
     def _ai_label(self):
         return "Forte" if self.ai_level == "mc" else "Normale"
@@ -249,13 +259,13 @@ class PresidentScene(Scene):
         self.btn_steal.label = self._steal_label()
 
     def _dec(self):
-        self.N = max(4, self.N - 1)
+        self.N = max(2, self.N - 1)
 
     def _inc(self):
-        self.N = min(8, self.N + 1)
+        self.N = min(10, self.N + 1)
 
     def _begin(self):
-        self.g = PresidentGame(self.N, self.equitable)
+        self.g = PresidentGame(self.N, self.equitable, small_roles=self.small_roles)
         self._start_round()
 
     # ------------------------------------------------------------------
@@ -649,6 +659,8 @@ class PresidentScene(Scene):
         opts = [self.btn_ai]
         if self._has_remainder():
             opts.append(self.btn_dist)
+        if self.N < 4:
+            opts.append(self.btn_small)
         opts.append(self.btn_volee)
         if self.a_la_volee:
             opts.append(self.btn_react)
@@ -668,6 +680,11 @@ class PresidentScene(Scene):
         self.btn_ai.label = self._ai_label()
         self.btn_dist.fill = self._SETUP_GREEN if self.equitable else self._SETUP_ORANGE
         self.btn_dist.label = self._dist_label()
+        self.btn_small.fill = (self._SETUP_ORANGE if self.small_roles == "vices"
+                               else self._SETUP_BLUE)
+        self.btn_small.label = self._small_label()
+        self.btn_small.fill_hover = tuple(min(255, c + 24) for c in self.btn_small.fill)
+        self.btn_small.text_col = C.TEXT_LIGHT
         self.btn_volee.fill = self._SETUP_GOLD if self.a_la_volee else self._SETUP_GREY
         self.btn_volee.label = self._volee_label()
         self.btn_react.fill = {"none": self._SETUP_GREY, "slow": self._SETUP_BLUE,
@@ -739,6 +756,14 @@ class PresidentScene(Scene):
                                 self.dfont, C.TEXT_DIM, (lx + pad, ly + 26),
                                 "left"))
             ly += 56
+        if self.N < 4:
+            self._dividers.append((lx + pad, lx + pw - pad, ly))
+            ly += 14
+            desc = ("Neutre au milieu à 3 joueurs · "
+                    + ("1 carte échangée" if self.small_roles == "vices"
+                       else "2 cartes échangées"))
+            ly = self._opt_row(lx, pw, ly, "Titres (moins de 4 joueurs)", desc,
+                               self.btn_small)
         left_bottom = ly + 12
         self._panels.append((pygame.Rect(lx, top, pw, left_bottom - top),
                              "PARTIE", (120, 170, 210)))
@@ -1174,16 +1199,19 @@ class PresidentScene(Scene):
             return ((self.g.players[idx].name, True) if idx is not None
                     else ("?", False))
 
-        # colonnes : 4 rôles clés (nom) + éventuelle colonne « Neutres » (compteur)
-        cols = [(self.title_for(0), self.title_col(0), name_of(0)),
-                (self.title_for(1), self.title_col(1), name_of(1))]
-        neutres = list(range(2, self.N - 2))
-        if neutres:
-            done = sum(1 for p in neutres if p in by_place)
-            cols.append(("Neutres", NEUTRAL_COL,
-                         (f"{done} / {len(neutres)}", done > 0)))
-        cols.append((self.title_for(self.N - 2), self.title_col(self.N - 2),
-                     name_of(self.N - 2)))
+        # colonnes : titres clés (nom) + éventuelle colonne « Neutres » (compteur)
+        cols = [(self.title_for(0), self.title_col(0), name_of(0))]
+        if self.N >= 4:
+            cols.append((self.title_for(1), self.title_col(1), name_of(1)))
+            neutres = list(range(2, self.N - 2))
+            if neutres:
+                done = sum(1 for p in neutres if p in by_place)
+                cols.append(("Neutres", NEUTRAL_COL,
+                             (f"{done} / {len(neutres)}", done > 0)))
+            cols.append((self.title_for(self.N - 2), self.title_col(self.N - 2),
+                         name_of(self.N - 2)))
+        elif self.N == 3:                       # un seul Neutre au milieu
+            cols.append((self.title_for(1), self.title_col(1), name_of(1)))
         cols.append((self.title_for(self.N - 1), self.title_col(self.N - 1),
                      name_of(self.N - 1)))
 

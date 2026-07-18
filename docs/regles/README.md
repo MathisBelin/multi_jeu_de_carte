@@ -9,6 +9,7 @@ qu'implémentées dans le code.
 | Le Président | [president.md](president.md) | ✅ jouable |
 | Bataille | [bataille.md](bataille.md) | ✅ jouable |
 | Le Pouilleux | [pouilleux.md](pouilleux.md) | ✅ jouable |
+| Le Bouclié | [bouclie.md](bouclie.md) | ✅ jouable |
 | FreeCell | [freecell.md](freecell.md) | 🔜 à venir |
 | Spider | [spider.md](spider.md) | 🔜 à venir |
 

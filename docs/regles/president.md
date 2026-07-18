@@ -1,7 +1,7 @@
 # Règles — Le Président (Trou du cul)
 
 Implémentation : [`game/president.py`](../../game/president.py).
-**1 joueur humain contre 3 à 7 IA** — soit **4 à 8 joueurs** au total. Le nombre
+**1 joueur humain contre 1 à 9 IA** — soit **2 à 10 joueurs** au total. Le nombre
 se choisit sur un **écran de configuration** (boutons − / +) avant de commencer,
 ainsi que le **niveau des IA** : « Normale » (heuristique rapide) ou « Forte »
 (Monte-Carlo, qui simule des fins de partie — plus redoutable), et l'option
@@ -9,6 +9,12 @@ ainsi que le **niveau des IA** : « Normale » (heuristique rapide) ou « Forte 
 désactivée**. Quand elle est activée, deux réglages supplémentaires
 apparaissent : la **réactivité des bots** (ne volent pas / 3 s / instantané) et
 l'option **« Voler son propre jeu »**.
+
+**Moins de 4 joueurs** : il n'y a pas la place pour les quatre titres, donc un
+réglage de config choisit **quels deux titres garder** : soit les **extrêmes**
+(**Président** & **Trou du cul**, échange de 2 cartes), soit les **Vices**
+(**Vice-Président** & **Vice-Trou**, échange d'1 carte). À **3 joueurs**, le
+joueur du milieu est **Neutre** (pas d'échange). Sans effet à 4 joueurs ou plus.
 
 ## But du jeu
 Se **débarrasser de toutes ses cartes** le plus vite possible. L'ordre dans

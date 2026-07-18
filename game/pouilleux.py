@@ -15,6 +15,7 @@ cachée) chez son voisin. Le joueur qui reste avec la carte orpheline en fin de
 partie est le Pouilleux (le perdant). L'humain (siège 0) clique une carte dans
 l'éventail du voisin ; les IA piochent au hasard.
 """
+import math
 import random
 
 import pygame
@@ -24,7 +25,8 @@ from . import ui
 from .cards import Card, CardRenderer
 from .scene import Scene
 
-NAMES = ["Vous", "Alice", "Bruno", "Carla", "David", "Elsa", "Hugo", "Inès"]
+NAMES = ["Vous", "Alice", "Bruno", "Carla", "David", "Elsa", "Hugo", "Inès",
+         "Jules", "Kenza"]
 
 PARTNER_SUIT = {C.SPADE: C.CLUB, C.CLUB: C.SPADE,
                 C.HEART: C.DIAMOND, C.DIAMOND: C.HEART}
@@ -74,7 +76,7 @@ class PouilleuxScene(Scene):
         self.num_font = pygame.font.SysFont(C.FONT_UI, 44, bold=True)
 
         self.cx = C.SCREEN_W // 2
-        self.DISCARD = (C.SCREEN_W - 176, 384)
+        self.DISCARD = (C.SCREEN_W // 2 - 44, 232)   # centre de l'anneau
 
         self.N = 4
         self.version = "classic"    # "classic" | "mystery"
@@ -187,7 +189,7 @@ class PouilleuxScene(Scene):
         # nombre de joueurs (stepper)
         self._texts.append(("Nombre de joueurs", self.small, C.TEXT_LIGHT,
                             (px + pad, y + 14), "left"))
-        self._texts.append(("Vous + IA (2 à 8)", self.dfont, C.TEXT_DIM,
+        self._texts.append(("Vous + IA (2 à 10)", self.dfont, C.TEXT_DIM,
                             (px + pad, y + 40), "left"))
         grp = 56 + 80 + 56
         gx = px + pw - pad - grp
@@ -213,7 +215,7 @@ class PouilleuxScene(Scene):
         self.N = max(2, self.N - 1)
 
     def _inc(self):
-        self.N = min(8, self.N + 1)
+        self.N = min(10, self.N + 1)
 
     def _toggle_version(self):
         self.version = "mystery" if self.version == "classic" else "classic"
@@ -235,7 +237,7 @@ class PouilleuxScene(Scene):
             self._place_discard_float(btns)
             return btns
         if self.phase == "discard":
-            btns = [self.btn_donner, self.btn_menu]
+            btns = [self.btn_shuffle, self.btn_donner, self.btn_menu]
             self._place_discard_float(btns)
             return btns
         if self.phase == "give":
@@ -308,6 +310,11 @@ class PouilleuxScene(Scene):
             return
         self.selected = []
         self._post_turn()
+        # Ce clic « Donner » vaut aussi accord : le voisin qui suit pioche
+        # toujours chez nous, inutile de redemander un second « Donner »
+        # (on a déjà pu mélanger / réordonner pendant la défausse).
+        if self.phase == "give":
+            self._give_consent()
 
     def _give_consent(self):
         """L'humain (victime) donne son accord : le voisin pioche chez lui."""
@@ -422,15 +429,22 @@ class PouilleuxScene(Scene):
     def _sort_key(self, card):
         return (card.rank, C.SUITS.index(card.suit))
 
+    # Cercle (ellipse) des joueurs : l'humain en bas, les adversaires sur l'arc
+    # SUPÉRIEUR (le centre-bas reste libre pour la zone où arrivent les cartes du
+    # voisin quand c'est mon tour, « devant moi »).
+    EC = (C.SCREEN_W // 2, 378)
+    RX, RY = 542, 288
+
     def _layout_seats(self):
-        cx = self.cx
-        self.pod_center = {0: (cx, C.SCREEN_H - 150)}
+        self.pod_center = {0: (self.cx, C.SCREEN_H - 150)}
         opp = list(range(1, self.N))
         m = len(opp)
-        y = 150
         for j, seat in enumerate(opp):
-            x = cx if m == 1 else int(ui.lerp(240, C.SCREEN_W - 240, j / (m - 1)))
-            self.pod_center[seat] = (x, y)
+            ang = 90.0 if m == 1 else 202.0 - 224.0 * (j / (m - 1))
+            rad = math.radians(ang)
+            x = self.EC[0] + self.RX * math.cos(rad)
+            y = self.EC[1] - self.RY * math.sin(rad)
+            self.pod_center[seat] = (int(x), int(y))
 
     # ------------------------------------------------------------------
     # Déroulement
@@ -472,8 +486,22 @@ class PouilleuxScene(Scene):
         # (bouton « Donner ») pour lui laisser le temps de mélanger sa main.
         if self.cur != 0 and self.victim == 0:
             self.phase = "give"
+        elif self.cur == 0 and self.victim is not None and self.hands[self.victim]:
+            # C'est mon tour : les cartes du voisin viennent se placer devant moi.
+            self._launch_zone_in()
         else:
             self.phase = "wait"
+
+    def _launch_zone_in(self):
+        """Anime l'arrivée des cartes (face cachée) du voisin depuis son pod vers
+        la zone devant l'humain, avant qu'on puisse en piocher une."""
+        v = self.victim
+        slots = self._zone_slots(len(self.hands[v]))
+        vx, vy = self.pod_center[v]
+        start = (vx - self.renderer.w // 2, vy - self.renderer.h // 2)
+        flies = [Fly(c, start, slots[i].topleft, dur=0.5, face_down=True)
+                 for i, c in enumerate(self.hands[v])]
+        self._launch(flies, lambda: setattr(self, "phase", "wait"))
 
     def _launch(self, flies, after):
         self.flies = flies
@@ -499,9 +527,16 @@ class PouilleuxScene(Scene):
         reveal = (cur == 0)
         face_up = (v == 0 and cur != 0)
         face_down = not (reveal or face_up)
-        self._launch([Fly(card, start, target, reveal=reveal,
-                          face_down=face_down)],
-                     lambda: self._after_draw(card))
+        flies = [Fly(card, start, target, reveal=reveal, face_down=face_down)]
+        # Quand l'humain pioche depuis la zone, les cartes NON choisies du voisin
+        # repartent chez lui (symétrie de l'arrivée « devant moi »).
+        if cur == 0:
+            vp = self.pod_center[v]
+            back = (vp[0] - self.renderer.w // 2, vp[1] - self.renderer.h // 2)
+            rest = [s for i, s in enumerate(slots) if i != k]
+            for c, s in zip(self.hands[v], rest):
+                flies.append(Fly(c, s.topleft, back, dur=0.4, face_down=True))
+        self._launch(flies, lambda: self._after_draw(card))
 
     def _after_draw(self, card):
         cur = self.cur
@@ -609,8 +644,9 @@ class PouilleuxScene(Scene):
             return
 
     def _reorder_allowed(self):
-        """On ne peut réordonner sa main que hors de son propre tour."""
-        return (self.phase in ("ready", "give")
+        """On ne peut réordonner sa main que hors de son propre tour (la phase
+        `discard` incluse : elle sert aussi d'accord avant que le voisin pioche)."""
+        return (self.phase in ("ready", "give", "discard")
                 or (self.phase == "wait" and self.cur != 0))
 
     def _drop_drag(self, pos):
@@ -666,7 +702,7 @@ class PouilleuxScene(Scene):
         spacing = 0 if n == 1 else min(int(cw * 0.92), (760 - cw) // (n - 1))
         total = spacing * (n - 1) + cw
         x0 = self.cx - total // 2
-        y = 322
+        y = 498                       # devant l'humain (centre-bas), sous l'anneau
         return [pygame.Rect(x0 + i * spacing, y, cw, ch) for i in range(n)]
 
     def _fan_x(self, n):
@@ -797,15 +833,16 @@ class PouilleuxScene(Scene):
         bar = pygame.Surface((C.SCREEN_W, 46), pygame.SRCALPHA)
         bar.fill((0, 0, 0, 60))
         surface.blit(bar, (0, 0))
-        surface.blit(self.title_font.render("Le Pouilleux", True, C.TEXT_LIGHT),
-                     (24, 10))
+        ver = "Classique" if self.version == "classic" else "Mystère"
+        surface.blit(self.title_font.render(f"Le Pouilleux — {ver}", True,
+                                            C.TEXT_LIGHT), (24, 10))
         if self.phase == "ready":
             txt = ("Écartez vos paires (surlignées) : cliquez les 2 cartes puis "
                    "la pile de défausse, puis « Prêt »")
             s = self.small.render(txt, True, C.ACCENT)
             surface.blit(s, s.get_rect(center=(self.cx, 23)))
         elif self.phase == "discard":
-            txt = ("Défaussez votre double (cliquez les 2 cartes puis la pile), "
+            txt = ("Défaussez votre double, mélangez ou réordonnez si besoin, "
                    "puis « Donner »")
             s = self.small.render(txt, True, C.ACCENT)
             surface.blit(s, s.get_rect(center=(self.cx, 23)))
@@ -869,7 +906,7 @@ class PouilleuxScene(Scene):
             if self.phase == "wait":
                 p = self.small.render(
                     f"Cliquez une carte de {self._name(v)}", True, C.TEXT_LIGHT)
-                surface.blit(p, p.get_rect(center=(self.cx, 300)))
+                surface.blit(p, p.get_rect(center=(self.cx, 476)))
 
     def _draw_human(self, surface):
         cw, ch = self.renderer.w, self.renderer.h

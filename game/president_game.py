@@ -18,7 +18,8 @@ from .cards import Card
 ORDER = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 1, 2]      # 3 faible -> 2 fort
 ORDER_REV = list(reversed(ORDER))                         # revolution
 QUEEN = 12
-NAMES = ["Vous", "Alice", "Bruno", "Carla", "David", "Elsa", "Hugo", "Inès"]
+NAMES = ["Vous", "Alice", "Bruno", "Carla", "David", "Elsa", "Hugo", "Inès",
+         "Jules", "Kenza"]
 
 
 class Player:
@@ -50,9 +51,13 @@ class Result:
 
 class PresidentGame:
     def __init__(self, n=4, equitable=True, direction=1, prev_ranking=None,
-                 round_no=0):
+                 round_no=0, small_roles="ends"):
         self.N = n
         self.equitable = equitable
+        # À moins de 4 joueurs, il n'y a pas la place pour les 4 titres : on
+        # garde soit les EXTRÊMES ("ends" → Président / Trou du cul), soit les
+        # VICES ("vices" → Vice-Président / Vice-Trou). Sans effet à N >= 4.
+        self.small_roles = small_roles
         self.direction = direction
         self.prev_ranking = prev_ranking
         self.round_no = round_no
@@ -189,7 +194,14 @@ class PresidentGame:
           MEILLEURES cartes — le prélèvement est DIFFÉRÉ jusqu'à sa confirmation
           (impossible de tricher : les cartes sont imposées)."""
         r = self.prev_ranking
-        pairs = ((r[0], r[self.N - 1], 2), (r[1], r[self.N - 2], 1))
+        if self.N >= 4:
+            pairs = ((r[0], r[self.N - 1], 2), (r[1], r[self.N - 2], 1))
+        elif self.small_roles == "vices":
+            # Vice-Président ↔ Vice-Trou : un seul échange, 1 carte.
+            pairs = ((r[0], r[self.N - 1], 1),)
+        else:
+            # Président ↔ Trou du cul : un seul échange, 2 cartes.
+            pairs = ((r[0], r[self.N - 1], 2),)
         human_action = None
         for winner, loser, n in pairs:
             if self.players[loser].human:
@@ -284,14 +296,24 @@ class PresidentGame:
         return None
 
     def title_for(self, place):
+        if self.N >= 4:
+            if place == 0:
+                return "Président"
+            if place == 1:
+                return "Vice-Président"
+            if place == self.N - 1:
+                return "Trou du cul"
+            if place == self.N - 2:
+                return "Vice-Trou"
+            return "Neutre"
+        # Moins de 4 joueurs : deux titres seulement (au choix), Neutre au milieu.
+        top, bottom = (("Vice-Président", "Vice-Trou")
+                       if self.small_roles == "vices"
+                       else ("Président", "Trou du cul"))
         if place == 0:
-            return "Président"
-        if place == 1:
-            return "Vice-Président"
+            return top
         if place == self.N - 1:
-            return "Trou du cul"
-        if place == self.N - 2:
-            return "Vice-Trou"
+            return bottom
         return "Neutre"
 
     # ------------------------------------------------------------------
@@ -476,6 +498,7 @@ class PresidentGame:
         g = PresidentGame.__new__(PresidentGame)
         g.N = self.N
         g.equitable = self.equitable
+        g.small_roles = self.small_roles
         g.direction = self.direction
         g.prev_ranking = list(self.prev_ranking) if self.prev_ranking else None
         g.round_no = self.round_no

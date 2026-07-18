@@ -13,6 +13,7 @@ from game.solitaire import SolitaireScene
 from game.president import PresidentScene
 from game.bataille import BattleScene
 from game.pouilleux import PouilleuxScene
+from game.bouclie import BouclieScene
 
 
 class App:
@@ -31,6 +32,7 @@ class App:
         self._president = None
         self._bataille = None
         self._pouilleux = None
+        self._bouclie = None
         self.running = True
         self.manager.go(MenuScene(self), instant=True)
 
@@ -63,6 +65,10 @@ class App:
     def show_pouilleux(self):
         self._pouilleux = PouilleuxScene(self)
         self.manager.go(self._pouilleux)
+
+    def show_bouclie(self):
+        self._bouclie = BouclieScene(self)
+        self.manager.go(self._bouclie)
 
     # --- boucle principale ---
     def run(self):

@@ -26,6 +26,7 @@ Appuyez sur **F11** (ou le bouton du menu) pour passer en **plein écran**.
 | Le Président  | ✅ Jouable  |
 | Bataille      | ✅ Jouable  |
 | Le Pouilleux  | ✅ Jouable  |
+| Le Bouclié    | ✅ Jouable  |
 | FreeCell      | 🔜 À venir  |
 | Spider        | 🔜 À venir  |
 
@@ -52,12 +53,13 @@ game/
   president_game.py  Le Président : moteur pur de règles (sans pygame)
   ai.py / ai_mc.py   Bots du Président : heuristique / Monte-Carlo
   bataille.py        Bataille : duel 2 joueurs avec jokers (54 cartes)
-  pouilleux.py       Le Pouilleux (Old Maid) : 2–8 joueurs, interactif
+  pouilleux.py       Le Pouilleux (Old Maid) : 2–10 joueurs, interactif
+  bouclie.py         Le Bouclié : élimination boucliers/PV, 2–10 joueurs
 ```
 
 ## Le Président — l'essentiel
 
-**4 à 8 joueurs** (vous + 3 à 7 IA, au choix sur un écran de config, avec le
+**2 à 10 joueurs** (vous + 1 à 9 IA, au choix sur un écran de config, avec le
 niveau d'IA **Normale** ou **Forte** — Monte-Carlo). Videz votre main avant les
 autres ; l'ordre de sortie donne les titres (Président → Trou du cul). Points
 clés :
@@ -99,7 +101,7 @@ auto · `N` nouvelle partie. 👉 [docs/regles/bataille.md](docs/regles/bataille
 
 ## Le Pouilleux — l'essentiel
 
-Version française du *Old Maid*, **interactif** à **2–8 joueurs** (vous + IA). On
+Version française du *Old Maid*, **interactif** à **2–10 joueurs** (vous + IA). On
 retire une carte du jeu pour qu'une seule reste sans partenaire : l'**orpheline**.
 Les paires (**même rang + même couleur**) sont défaussées ; à son tour, on pioche
 une carte chez son voisin. Deux versions : **classique** (Valet de Trèfle retiré
@@ -108,6 +110,21 @@ hasard, orpheline inconnue). Le dernier à détenir l'orpheline est le **Pouille
 
 **Commandes :** clic sur une carte du voisin pour piocher · `Échap` menu.
 👉 [docs/regles/pouilleux.md](docs/regles/pouilleux.md).
+
+## Le Bouclié — l'essentiel
+
+Jeu d'**élimination** à **2–10 joueurs** (vous + IA). Paquet réduit aux rangs
+**As (=1) à 10**. Chacun a des **PV** (2 cartes côte à côte) et un **bouclier**
+(1 carte à l'horizontale au-dessus, façon Stonehenge). À son tour, on **tire une
+carte face cachée** puis on choisit : **attaquer** un adversaire (force = carte +
+charges ; le bouclier absorbe sa valeur, un bouclier plus fort renvoie les dégâts),
+**changer un bouclier**, **charger** (garder la carte cachée, cumulable, dépensée
+d'un coup en attaquant), ou **prendre de la vie** (risqué : >5 gagne, <5 perd). La
+carte n'est **révélée qu'à l'action** (sauf charge) ; un **As en bouclier** permet
+de voir la carte d'avance. Dernier survivant = vainqueur.
+
+**Commandes :** boutons d'action puis clic sur le pod cible · `Espace`/clic pour
+enchaîner · `Échap` menu. 👉 [docs/regles/bouclie.md](docs/regles/bouclie.md).
 
 ## Ajouter un mode
 

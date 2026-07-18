@@ -16,7 +16,8 @@ Je reprends le développement d'un jeu de cartes en Python déjà bien avancé.
   et simple : `game/bataille.py`.
 
 ## Ce qui est fait
-1. **Menu** (`game/menu.py`) : 5 tuiles (3 jouables), bouton plein écran.
+1. **Menu** (`game/menu.py`) : 7 tuiles en **3 colonnes** (5 jouables : Solitaire,
+   Président, Bataille, Pouilleux, Bouclié ; FreeCell/Spider à venir), plein écran.
 2. **Solitaire Klondike** (`game/solitaire.py`) : complet — glisser-déposer,
    distribution animée, double-clic → fondation, annuler (U), résolution auto,
    victoire + confettis.
@@ -36,9 +37,15 @@ Je reprends le développement d'un jeu de cartes en Python déjà bien avancé.
      rythme IA, écran d'échange, rendu (table en cercle, pods IA compacts).
    - IA bots : `game/ai.py` (heuristique + comptage) et `game/ai_mc.py`
      (Monte-Carlo par déterminisation, threadé). Option « IA : Normale / Forte ».
-5. **Le Pouilleux** (`game/pouilleux.py`) : Old Maid français interactif 2–8
+5. **Le Pouilleux** (`game/pouilleux.py`) : Old Maid français interactif 2–10
    joueurs (humain = siège 0, IA autonomes), versions **classique** (Valet de
    Pique connu) / **mystère**. Appariement même rang + même couleur.
+   - **Présentation** : joueurs disposés **en cercle** (ellipse `EC`/`RX`/`RY`,
+     humain en bas, adversaires sur l'arc supérieur ; centre-bas libre), défausse
+     au **centre** de l'anneau, **titre** avec la version (« — Classique/Mystère »).
+     À mon tour, `_launch_zone_in` anime les cartes du voisin qui **arrivent devant
+     moi** (`_zone_slots`, y=498) ; à la pioche, la carte choisie vient à moi et
+     les autres **repartent chez le voisin** (`_do_draw`, symétrie).
    - **Défausse `auto` / `manuel`** (bouton sur l'écran de config). En manuel,
      l'humain écarte lui-même ses paires (surbrillance + clic sur les 2 cartes
      puis sur la pile de défausse) à la **mise en place** (phase `ready`, bouton
@@ -58,9 +65,33 @@ Je reprends le développement d'un jeu de cartes en Python déjà bien avancé.
    - **Accord « Donner »** (phase `give`, les 2 modes) : quand un voisin va piocher
      chez l'humain (`cur != 0` et `victim == 0`), l'IA attend que l'humain clique
      **Donner** (`_give_consent`) → laisse le temps de mélanger/réordonner.
+6. **Le Bouclié** (`game/bouclie.py`) : jeu d'élimination 2–10 joueurs (humain =
+   siège 0, IA autonomes). Paquet **40 cartes** (As=1 … 10, ni figures ni jokers).
+   Chacun a des **PV** (2 cartes côte à côte, `pv` entier = source de vérité +
+   `pv_cards` d'affichage via `pv_to_cards`) et un **bouclier** (1 carte dessinée à
+   l'horizontale, `rotate 90`). À son tour on tire **face cachée** puis on choisit
+   (carte révélée à l'action, SAUF charge) : **Attaquer** (force = tirée + Σ
+   charges vs bouclier : `>` dégâts cible / `=` rien / `<` retour sur l'attaquant),
+   **Changer bouclier** (soi ou autre), **Charger** (garder caché, cumulable,
+   dépensé d'un coup en attaquant ; perdu si on perd des PV), **Prendre de la vie**
+   (>5 gagne la valeur, <5 perd `5−v`). **As en bouclier** = voir la carte d'avance
+   (`peek`). Machine à états `draw`/`choose`/`target_*`/`anim`/`hold` ; `_change_pv`
+   vide les charges à toute perte de PV et élimine à `pv<=0`. Dernier survivant gagne.
+   - **Présentation** : joueurs **en cercle** (ellipse, humain en bas), PV **en
+     cartes** pour tous, bouclier montré **à la fois en carte** (Stonehenge) **et
+     en écusson** chiffré (`_draw_shield_badge`). Effectifs 2→10 sans chevauchement,
+     pioche/défausse (même taille) dans les coins bas.
+   - **Lisibilité** : la carte tirée **vole vers le joueur actif**, un **bandeau**
+     annonce l'action + cible, les charges+carte se **révèlent une à une**
+     (`stage`, « Force : N »), puis un **projectile** (`proj`) vole vers la cible.
+     Effets : `FloatText` (dégâts/soin/Bloqué/Riposte), `shakes`, `glow`.
+   - **IA** `_ai_decide` : scoring **agressif** (sinon la partie ne converge pas) ;
+     change son bouclier OU celui d'un adversaire à son avantage.
 
 ## Règles du Président (implémentées, à respecter absolument)
-- 4 à 8 joueurs (humain = siège 0 + IA), choisis sur l'écran de config.
+- 2 à 10 joueurs (humain = siège 0 + IA), choisis sur l'écran de config. À moins
+  de 4 joueurs, réglage `small_roles` : garder les extrêmes (Président/Trou, 2
+  cartes) ou les Vices (Vice-Prés/Vice-Trou, 1 carte) ; Neutre au milieu à 3.
 - Distribution : « équitable » (52//N chacun, excédent retiré, les 2 Dames
   toujours conservées) ou « complète » (tout distribué, les joueurs à +1 carte
   sont des sièges VOISINS). L'option n'apparaît que si `52 % N != 0`.
@@ -141,7 +172,7 @@ imprimant des cartes ♥/♠ ; pour tester l'IA MC en boucle synchrone, faire
   (`available=True` + action), documenter dans `docs/regles/`. Gabarit :
   `game/bataille.py`.
 - Réglage éventuel du budget Monte-Carlo (`determinizations=32`) si l'IA
-  « Forte » est trop lente à 8 joueurs.
+  « Forte » est trop lente à 10 joueurs.
 - Le Monte-Carlo NE simule PAS l'« à la volée » dans ses rollouts (approximation
   assumée) — chantier possible si on veut le rendre exact.
 - Sons / effets, améliorations visuelles.
