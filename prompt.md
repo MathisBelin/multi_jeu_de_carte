@@ -16,11 +16,21 @@ Je reprends le développement d'un jeu de cartes en Python déjà bien avancé.
   et simple : `game/bataille.py`.
 
 ## Ce qui est fait
-1. **Menu** (`game/menu.py`) : 7 tuiles en **3 colonnes** (5 jouables : Solitaire,
-   Président, Bataille, Pouilleux, Bouclié ; FreeCell/Spider à venir), plein écran.
+1. **Menu** (`game/menu.py`) : 8 tuiles en **3 colonnes** (Solitaire, Président,
+   Bataille, Pouilleux, Bouclié, Barbu, Dutch, Le 98), plein écran. Les
+   descriptions des tuiles passent à la ligne si besoin (`wrap_text`, 2 lignes max)
+   → plus de débordement. La tuile **Solitaire** ouvre un **écran de choix**
+   Klondike / Spider (`game/solitaire_select.py`) — le Spider n'a pas de tuile
+   propre. FreeCell (à venir) n'est plus affiché au menu.
 2. **Solitaire Klondike** (`game/solitaire.py`) : complet — glisser-déposer,
    distribution animée, double-clic → fondation, annuler (U), résolution auto,
    victoire + confettis.
+2bis. **Spider Solitaire** (`game/spider.py`) : 2 jeux (104 cartes), 10 colonnes,
+   difficulté 1/2/4 couleurs (phase `setup`). Empile décroissant toute enseigne,
+   déplace un bloc seulement s'il est d'une seule enseigne ; pioche = 1 carte/
+   colonne (interdit si colonne vide) ; suite Roi→As même enseigne → fondation
+   (8 = victoire). Double-clic = déplacement auto, undo, score. `main.py` :
+   `show_solitaire`=chooser, `show_klondike`, `show_spider`.
 3. **Bataille** (`game/bataille.py`) : duel 2 joueurs (vous vs ordinateur),
    **avec 2 jokers** (54 cartes), autonome (aucune décision). Animations de
    retournement, écran « showdown » (pause pour voir le résultat, clic accélère),
@@ -65,6 +75,12 @@ Je reprends le développement d'un jeu de cartes en Python déjà bien avancé.
    - **Accord « Donner »** (phase `give`, les 2 modes) : quand un voisin va piocher
      chez l'humain (`cur != 0` et `victim == 0`), l'IA attend que l'humain clique
      **Donner** (`_give_consent`) → laisse le temps de mélanger/réordonner.
+   - **Format `survival`** (option config « Format » : Manche unique / Survie,
+     min 3 j.) : en survie, le Pouilleux de chaque manche est **éliminé** puis on
+     **redistribue** jusqu'au **dernier survivant**. `new_game` = reset tournoi +
+     `_deal_round` (distribue aux non-éliminés) ; `_finish` élimine, phase
+     `round_over` (bouton « Manche suivante » → `_next_round`) puis `over`
+     (`_draw_over_survival`).
 6. **Le Bouclié** (`game/bouclie.py`) : jeu d'élimination 2–10 joueurs (humain =
    siège 0, IA autonomes). Paquet **40 cartes** (As=1 … 10, ni figures ni jokers).
    Chacun a des **PV** (2 cartes côte à côte, `pv` entier = source de vérité +
@@ -74,7 +90,7 @@ Je reprends le développement d'un jeu de cartes en Python déjà bien avancé.
    charges vs bouclier : `>` dégâts cible / `=` rien / `<` retour sur l'attaquant),
    **Changer bouclier** (soi ou autre), **Charger** (garder caché, cumulable,
    dépensé d'un coup en attaquant ; perdu si on perd des PV), **Prendre de la vie**
-   (>5 gagne la valeur, <5 perd `5−v`). **As en bouclier** = voir la carte d'avance
+   (≤5 gagne la valeur, >5 perd `v−5`). **As en bouclier** = voir la carte d'avance
    (`peek`). Machine à états `draw`/`choose`/`target_*`/`anim`/`hold` ; `_change_pv`
    vide les charges à toute perte de PV et élimine à `pv<=0`. Dernier survivant gagne.
    - **Présentation** : joueurs **en cercle** (ellipse, humain en bas), PV **en
@@ -87,6 +103,116 @@ Je reprends le développement d'un jeu de cartes en Python déjà bien avancé.
      Effets : `FloatText` (dégâts/soin/Bloqué/Riposte), `shakes`, `glow`.
    - **IA** `_ai_decide` : scoring **agressif** (sinon la partie ne converge pas) ;
      change son bouclier OU celui d'un adversaire à son avantage.
+7. **Le Barbu** (`game/barbu.py`) : jeu de **levées à contrats** interactif **3–10
+   joueurs** (humain = siège 0, IA autonomes). Logique + rendu dans la scène (pas
+   de moteur séparé). But = **le moins de points**. **6 manches** fixes (`MANCHES`) :
+   `plis` (sans règle), `coeurs`, `dames`, `roi_pique` (**K♠**, pas roi de cœur !),
+   `dernier` (dernier pli), `tout` (cumul).
+   - **Distribution égale** (`_deal`) : paquet 52, on retire `52 % N` cartes de
+     plus **bas rang** parmi les **non importantes** du contrat (`_is_important`
+     protège tous les cœurs / les 4 dames / le K♠ / les trois au tour « Tout »),
+     puis `52 // N` chacun. `manche_deck` = snapshot de la compo (pour l'IA).
+   - **Pli** : fournir le **signe** demandé si on l'a (`_legal_cards`), sinon
+     défausse libre ; **pas d'atout**, plus fort du signe gagne (`rank_val`, As
+     haut) et entame le suivant. `self.per = 52 // N` plis/manche, N cartes/pli.
+   - **Scoring** (`_trick_points`) au vainqueur du pli : `heart`/cœur, `queen`/dame,
+     `king` (K♠), `last` (dernier pli), **et** `trick` (+5) **par pli si**
+     `trick_counts[manche_idx]` (VRAI par défaut TOUTES manches). Défauts
+     5/10/20/80/100, tous réglables.
+   - **Premier joueur** = `(first_seat + manche_idx) % N`, `first_seat` **tiré au
+     sort** à `new_game` (sinon la manche 1 commençait toujours par l'humain), puis
+     tourne ; le vainqueur d'un pli mène le suivant.
+   - **Phases** : `setup`/`advanced` (sous-écran réglages) · `manche_intro` →
+     `playing`/`ai_think` → `anim` → `trick_end` → **ramassage animé**
+     (`_collect_trick` : les cartes du pli **volent vers le vainqueur**,
+     `_finish_collect`) → `manche_end` → suivante ou `over`.
+   - **IA** `_ai_play` : **heuristique** (pas de MC) mais affûtée — en suivant,
+     passe **sous** la maîtresse en lâchant sa carte la plus **dangereuse**
+     (`_danger`) ; prise inévitable (dernière à jouer) → n'ajoute pas de pénalité
+     (`_penalty_of`), lâche une haute carte sûre ; défaussée → jette la plus
+     dangereuse ; à l'entame (`_ai_lead`) utilise une **mémoire des cartes**
+     (`manche_played` + `_outstanding_higher`) pour mener une couleur qu'elle **ne
+     remportera pas**. Benchmark vs ancienne IA (N=4) : ~275 vs ~310 pts, 336 vs
+     264 parties gagnées.
+   - **Présentation** : cercle (`_layout_seats`), pli en couronne au centre
+     (`_trick_slot`), main cliquable en bas (injouables **grisées**), **score par
+     pod** (`_live_score` = total + manche courante). **Écran Avancé** : par valeur
+     de pénalité, boutons `−/+` **et** un **champ de saisie clavier** stylé
+     (`pen_field`, `_start_edit`/`_commit_edit`, caret, focus doré) ; + 6 bascules
+     « plis comptés » par manche. La saisie clavier est interceptée AVANT le
+     traitement normal des events (sinon Échap quitterait).
+8. **Le Dutch** (`game/dutch.py`) : jeu de **mémoire / bluff** interactif **2–6
+   joueurs** (humain = siège 0, IA autonomes). Logique + rendu dans la scène.
+   But = **plus petit total** ; **seul l'annonceur** de « Dutch » gagne/perd.
+   Paquet 52 ; **valeurs Dutch** (`dutch_value`) : As=1, 2–10=rang, J=11, Q=12,
+   **Roi noir (♠/♣)=0** (meilleure), **Roi rouge (♥/♦)=15** (pire). Chacun a **4
+   cartes face cachée**, en **regarde 2** au départ (humain choisit en phase
+   `peek`). **Connaissance** (`DPlayer.knows`) = ensemble d'**objets Card** vus,
+   qui **suit l'objet** (donc survit à un échange).
+   - **Tour** : piocher (`_begin_draw`) OU **prendre le dessus de la défausse**
+     (`_begin_take_discard`, `from_discard`) puis **remplacer** une carte
+     (`_do_replace`) ou **défausser** (`_do_discard`) pour un **pouvoir**
+     (`power_of`). **Seuls le Valet** (échanger deux cartes, `swap`) **et la Dame**
+     (regarder n'importe quelle carte, `look_any`) ont un pouvoir — toutes les
+     autres cartes n'en ont aucun. **Remplacer** une carte à pouvoir (Valet/Dame,
+     celle qui part à la défausse) **déclenche** son pouvoir pour le remplaçant
+     (`_finish_replace` → `_open_slap(discarder_power=True)`). Une carte prise dans
+     la défausse **doit être échangée**. Le `peek` initial humain est **définitif**.
+   - **Pouvoirs — sélection + validation** (`power_sel`) : on **sélectionne** la/les
+     carte(s) (surbrillance dorée + **croix** de désélection `_power_x_rects`) puis
+     **Valider** (`_validate_power`, actif à `len==_power_need()` : 1 Dame, 2 Valet)
+     ou **Annuler** (`_cancel_power`). File `power_queue` (`_process_next_power`,
+     `_order_power_seats`) : chaque défausseur d'une carte à pouvoir l'utilise
+     **chacun son tour** ; les IA passent par `_ai_power`.
+   - **Annonce « Dutch »** (`_announce_dutch`) : **ne coupe PAS le tour** — le joueur
+     joue son tour normalement puis la partie **se termine quand le tour lui revient**
+     (`_start_turn` révèle si `seat == dutch_caller`). Il peut continuer à slapper.
+   - **Défausse instantanée** (`_open_slap`/`_do_slap`/`_tick_slap`) — **temps réel,
+     non bloquante** : l'humain peut cliquer **n'importe quelle** de ses cartes
+     (`_human_slap_click`) → bonne valeur = elle part (`_do_slap`), mauvaise = **carte
+     de pénalité** (`_slap_penalty`, +1). Le **halo/timer** ne s'affiche **que si
+     l'humain** a une carte **connue** de la valeur (jamais d'indice sur les autres).
+     La fenêtre **bloque** (le prochain, une IA, attend le décompte) **seulement si le
+     prochain est une IA ET que l'humain peut se défausser** (ou pouvoir humain de
+     défausseur) ; sinon **arrière-plan** (`slap_bg`, `slap_flies`, IA slappent en
+     fond, leurs pouvoirs résolus instantanément `_apply_bot_power`/`_bot_swap_instant`).
+     Le tick bg ne tourne PAS pendant `self.flies` (sinon slot périmé) ; `_finish_replace`
+     défensif. Fin (`_do_reveal`) : l'annonceur gagne si total le plus bas **et**, à
+     égalité, strictement **moins de cartes** que les ex æquo (égalité parfaite ⇒ perd).
+   - **IA heuristique** (pas de MC) : `_ai_turn_start` pioche/annonce selon
+     `_est_total` (connues + espérance `UNKNOWN_EV≈6.6`) avec **pression** croissante ;
+     `_ai_choose` remplace au meilleur gain ou défausse pour un pouvoir ; `_ai_swap`
+     échange une carte haute connue contre une adverse plus basse.
+   - **Difficulté + options** (écran setup, conservées entre parties) : sélecteur
+     **Facile** (toutes aides ON + réaction max) / **Difficile** (tout OFF + réaction
+     min) / **Perso** (affiche le menu). 4 réglages en perso : `opt_show_known`
+     (cartes connues face visible), `opt_slap_highlight` (« Aide à la défausse » :
+     surligne **quelle** carte connue défausser), `opt_free_slap` (tenter avec
+     n'importe quelle carte, pénalité), `slap_window` (**temps de réaction des bots**,
+     1–4 s, presets `SLAP_PRESETS`).
+   - **Mémoire TOTALE** (demande utilisateur) : l'humain voit ses 2 cartes UNIQUEMENT
+     pendant la phase `peek` ; ensuite `_draw_hand` affiche TOUT face cachée (ses
+     cartes ET les adversaires) jusqu'à `over`. Les cartes vues (pioche/pouvoir)
+     restent dans `knows` (slap/IA) mais NE SONT JAMAIS affichées ; les pouvoirs ne
+     montrent qu'un aperçu bref (`_show_peek`). Pas de badge permanent.
+   - **Animations** (`_do_replace`/`_finish_replace`, `_do_discard`/`_finish_discard`) :
+     poser/défausser fait **voler** la carte, mutation du modèle **différée** à
+     l'atterrissage (carte en vol restée dans `self.drawn` = comptée ; `hide_slot`
+     masque l'emplacement animé).
+   - **Présentation** : cercle (`_layout_seats`), pioche/défausse **au centre**,
+     tout face cachée en jeu. Écran de fin : mains révélées + **total par plaque**.
+9. **Le 98** (`game/le98.py`) : défausse à **total commun** ≤ 98 (variante du « 99 »),
+   interactif 2–10 joueurs (humain siège 0, IA autonomes). 4 cartes/joueur, pioche
+   52 au centre, `pile_total` de 0 à max 98. Tour : poser 1 carte (effet) puis
+   repiocher (revenir à 4) ; qui ne peut plus jouer ≤ 98 **déborde**. Valeurs
+   (`_result_total`) : 2–10 = +valeur ; **As** +1/+11 (choix) ; **Valet** 0 +
+   inverse le sens ; **Dame** −10 ; **Roi** = 70. Modes : **Manche unique** (le
+   premier à déborder = `loser`, fin) / **Survie** (min 3 j. : élimine puis
+   redistribue jusqu'au dernier = `winner`) ; `_resolve_bust` branche selon
+   `survival`. IA `_ai_choose` **agressive**
+   (pousse le total au plus haut ≤ 98) — sinon manches sans fin. Total géant au
+   centre (rouge ≥ 85) entre pile et pioche, vies en pastilles, cartes jouables
+   surlignées / injouables grisées. `main.py` `show_le98`/`_le98` + tuile menu.
 
 ## Règles du Président (implémentées, à respecter absolument)
 - 2 à 10 joueurs (humain = siège 0 + IA), choisis sur l'écran de config. À moins
@@ -152,7 +278,7 @@ Tout est testable en headless avec le pilote SDL dummy :
 ```bash
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python - <<'PY'
 from main import App
-app = App(); app.show_president(); sc = app._president   # ou show_bataille / show_solitaire
+app = App(); app.show_president(); sc = app._president   # ou show_bataille / show_barbu / …
 for _ in range(200):
     sc.update(1/60)
 # pygame.image.save(app.screen, "out.png")
@@ -167,10 +293,10 @@ imprimant des cartes ♥/♠ ; pour tester l'IA MC en boucle synchrone, faire
 `sc._mc_thread.join()` après `update`.)
 
 ## Reste à faire / pistes
-- Modes **FreeCell, Spider** (annoncés dans le menu, non implémentés) — créer une
-  `Scene`, l'exposer dans `main.py` (`show_*`), l'activer dans `menu.py`
-  (`available=True` + action), documenter dans `docs/regles/`. Gabarit :
-  `game/bataille.py`.
+- Mode **FreeCell** (annoncé dans le menu, non implémenté) — créer une `Scene`,
+  l'exposer dans `main.py` (`show_*`), l'activer dans `menu.py` (`available=True`
+  + action), documenter dans `docs/regles/`. Gabarit : `game/bataille.py` (ou
+  `game/spider.py` pour un solitaire à colonnes).
 - Réglage éventuel du budget Monte-Carlo (`determinizations=32`) si l'IA
   « Forte » est trop lente à 10 joueurs.
 - Le Monte-Carlo NE simule PAS l'« à la volée » dans ses rollouts (approximation

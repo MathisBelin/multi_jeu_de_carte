@@ -10,10 +10,15 @@ from game import constants as C
 from game.scene import SceneManager
 from game.menu import MenuScene
 from game.solitaire import SolitaireScene
+from game.solitaire_select import SolitaireSelectScene
+from game.spider import SpiderScene
 from game.president import PresidentScene
 from game.bataille import BattleScene
 from game.pouilleux import PouilleuxScene
 from game.bouclie import BouclieScene
+from game.barbu import BarbuScene
+from game.dutch import DutchScene
+from game.le98 import Le98Scene
 
 
 class App:
@@ -29,10 +34,14 @@ class App:
         self.clock = pygame.time.Clock()
         self.manager = SceneManager(self)
         self._solitaire = None
+        self._spider = None
         self._president = None
         self._bataille = None
         self._pouilleux = None
         self._bouclie = None
+        self._barbu = None
+        self._dutch = None
+        self._le98 = None
         self.running = True
         self.manager.go(MenuScene(self), instant=True)
 
@@ -51,8 +60,16 @@ class App:
         self.manager.go(MenuScene(self))
 
     def show_solitaire(self):
+        # tuile « Solitaire » du menu : ecran de choix Klondike / Spider
+        self.manager.go(SolitaireSelectScene(self))
+
+    def show_klondike(self):
         self._solitaire = SolitaireScene(self)
         self.manager.go(self._solitaire)
+
+    def show_spider(self):
+        self._spider = SpiderScene(self)
+        self.manager.go(self._spider)
 
     def show_president(self):
         self._president = PresidentScene(self)
@@ -69,6 +86,18 @@ class App:
     def show_bouclie(self):
         self._bouclie = BouclieScene(self)
         self.manager.go(self._bouclie)
+
+    def show_barbu(self):
+        self._barbu = BarbuScene(self)
+        self.manager.go(self._barbu)
+
+    def show_dutch(self):
+        self._dutch = DutchScene(self)
+        self.manager.go(self._dutch)
+
+    def show_le98(self):
+        self._le98 = Le98Scene(self)
+        self.manager.go(self._le98)
 
     # --- boucle principale ---
     def run(self):

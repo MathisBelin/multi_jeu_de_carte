@@ -6,6 +6,24 @@ from . import ui
 from .scene import Scene
 
 
+def wrap_text(text, font, max_width, max_lines=2):
+    """Découpe un texte en lignes tenant dans max_width (au plus max_lines)."""
+    words = text.split()
+    lines, cur = [], ""
+    for w in words:
+        trial = (cur + " " + w).strip()
+        if font.size(trial)[0] <= max_width or not cur:
+            cur = trial
+        else:
+            lines.append(cur)
+            cur = w
+            if len(lines) == max_lines - 1:
+                break
+    if cur and len(lines) < max_lines:
+        lines.append(cur)
+    return lines[:max_lines]
+
+
 class ModeCard:
     """Grande tuile cliquable representant un mode de jeu."""
     def __init__(self, rect, title, desc, suit, available, action):
@@ -60,13 +78,15 @@ class ModeCard:
         title = title_font.render(self.title, True,
                                   C.TEXT_LIGHT if self.available else C.TEXT_DIM)
         surface.blit(title, (r.x + 28, r.y + 26))
-        desc = desc_font.render(self.desc, True, C.TEXT_DIM)
-        surface.blit(desc, (r.x + 28, r.y + 74))
+        lines = wrap_text(self.desc, desc_font, r.w - 56, max_lines=2)
+        for i, ln in enumerate(lines):
+            desc = desc_font.render(ln, True, C.TEXT_DIM)
+            surface.blit(desc, (r.x + 28, r.y + 68 + i * 20))
 
         tag = "JOUER" if self.available else "BIENTOT"
         tcol = C.ACCENT if self.available else (120, 126, 132)
         t = tag_font.render(tag, True, tcol)
-        surface.blit(t, (r.x + 28, r.bottom - 40))
+        surface.blit(t, (r.x + 28, r.bottom - 34))
 
 
 class MenuScene(Scene):
@@ -101,7 +121,7 @@ class MenuScene(Scene):
         left = (C.SCREEN_W - total_w) // 2
         top = 214
         specs = [
-            ("Solitaire", "Le grand classique en Klondike.",
+            ("Solitaire", "Klondike ou Spider, au choix.",
              C.SPADE, True, self.app.show_solitaire),
             ("Le Président", "Videz votre main avant les IA.",
              C.HEART, True, self.app.show_president),
@@ -111,10 +131,12 @@ class MenuScene(Scene):
              C.CLUB, True, self.app.show_pouilleux),
             ("Le Bouclié", "Boucliers et PV : éliminez les autres.",
              C.DIAMOND, True, self.app.show_bouclie),
-            ("FreeCell", "4 cellules, tout est visible.",
-             C.DIAMOND, False, None),
-            ("Spider", "Deux jeux, patience exigeante.",
-             C.HEART, False, None),
+            ("Le Barbu", "6 manches à contrats : le moins de points.",
+             C.SPADE, True, self.app.show_barbu),
+            ("Le Dutch", "Mémoire et bluff : visez le plus bas.",
+             C.DIAMOND, True, self.app.show_dutch),
+            ("Le 98", "Ne faites pas déborder la pile de 98.",
+             C.CLUB, True, self.app.show_le98),
         ]
         self.cards = []
         for i, (title, desc, suit, avail, action) in enumerate(specs):

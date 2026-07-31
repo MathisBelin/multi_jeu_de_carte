@@ -96,12 +96,25 @@ manuel, quand ce voisin est celui qui joue **juste après votre propre tour**, c
 accord est **fusionné** avec le « Donner » de votre défausse : un seul clic suffit
 (inutile de cliquer « Donner » deux fois de suite).
 
+## Format : manche unique ou survie (choisi à la configuration)
+
+- **Manche unique** (défaut) : une seule manche. Le détenteur de l'orpheline est
+  le **Pouilleux** (perdant), la partie s'arrête.
+- **Survie** (min **3 joueurs**) : à la fin de chaque manche, le **Pouilleux est
+  éliminé** ; on **redistribue** entre les joueurs restants et on rejoue. On
+  continue ainsi jusqu'à ce qu'il ne reste **qu'un seul joueur = le grand
+  gagnant**. Entre deux manches, un écran annonce l'éliminé et le bouton
+  **« Manche suivante »** relance. Les joueurs éliminés sont marqués **« Éliminé »**
+  sur leur plaque.
+
 ## Fin de partie
 
 La carte orpheline ne pouvant jamais s'apparier, elle circule jusqu'à ce que
 tous les autres joueurs soient sauvés. Le dernier joueur, qui détient l'orpheline,
-est le **Pouilleux**. L'écran de fin révèle la carte orpheline, affiche l'ordre
-dans lequel les joueurs ont été sauvés, et désigne le perdant.
+est le **Pouilleux**. En **manche unique**, l'écran de fin révèle la carte
+orpheline, affiche l'ordre dans lequel les joueurs ont été sauvés, et désigne le
+perdant. En **survie**, l'écran de fin annonce le **survivant** et l'**ordre
+d'élimination**.
 
 ## Commandes
 

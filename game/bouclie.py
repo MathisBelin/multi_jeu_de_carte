@@ -606,18 +606,15 @@ class BouclieScene(Scene):
         self.discard.append(self.drawn)
         self.drawn = None
         self.proj = None
-        if v > 5:
+        if v <= 5:
             self._change_pv(a, v)
             self._float(actor, f"+{v} PV", GREEN)
-            self.toast = f"{a.name} se soigne : tire {v} (>5) → +{v} PV"
-        elif v < 5:
-            loss = 5 - v
+            self.toast = f"{a.name} se soigne : tire {v} (≤5) → +{v} PV"
+        else:
+            loss = v - 5
             self._change_pv(a, -loss)
             self._float(actor, f"−{loss} PV (raté)", RED)
-            self.toast = f"{a.name} rate son soin : tire {v} (<5) → −{loss} PV"
-        else:
-            self._float(actor, "0", C.TEXT_LIGHT, big=False)
-            self.toast = f"{a.name} tire 5 → aucun effet"
+            self.toast = f"{a.name} rate son soin : tire {v} (>5) → −{loss} PV"
         self.stage = []
 
     # ---- IA : choisit la meilleure décision (scoring, joue à l'aveugle) ----
@@ -661,9 +658,11 @@ class BouclieScene(Scene):
             if strong.shield.rank >= 8:
                 cands.append(((strong.shield.rank - 6) * 0.9, "shield", strong.idx))
 
-        # ne se soigner qu'en danger réel
-        if me.pv <= 4:
-            cands.append(((5 - me.pv) * 1.3 + 1.0, "heal", None))
+        # ne se soigner qu'en danger réel ; le soin rend +v si v≤5, sinon −(v−5)
+        # (espérance nulle à l'aveugle) → on évite si la carte connue (peek) est >5
+        heal_gain = (val if val <= 5 else -(val - 5)) if self.peek else 0.0
+        if me.pv <= 4 and heal_gain >= 0:
+            cands.append(((5 - me.pv) * 1.3 + 1.0 + heal_gain, "heal", None))
 
         best = max(cands, key=lambda c: c[0] + random.uniform(0.0, 0.5))
         return best[1], best[2]

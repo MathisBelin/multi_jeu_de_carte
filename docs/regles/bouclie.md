@@ -53,10 +53,10 @@ raté), on **perd toutes ses charges** — sauf si l'on ne perd **aucun** PV.
 ### Prendre de la vie
 Action **risquée** :
 
-- carte tirée **> 5** : on **gagne sa valeur en PV** ;
-- carte tirée **< 5** : on **perd** ce qui lui manque pour atteindre 5
-  *(tirer 3 → −2 PV)* ;
-- carte tirée **= 5** : aucun effet.
+- carte tirée **≤ 5** : on **gagne sa valeur en PV** *(tirer 3 → +3 PV, tirer 5
+  → +5 PV)* ;
+- carte tirée **> 5** : on **perd** l'écart qui la sépare de 5
+  *(tirer 7 → −2 PV, tirer 9 → −4 PV)*.
 
 ## As en bouclier
 

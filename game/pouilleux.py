@@ -81,6 +81,10 @@ class PouilleuxScene(Scene):
         self.N = 4
         self.version = "classic"    # "classic" | "mystery"
         self.mode = "auto"          # "auto" | "manual"
+        self.survival = False       # mode survie : on élimine et on rejoue
+        self.eliminated = set()
+        self.elim_order = []
+        self.winner = None
         self.phase = "setup"
         self.victim = None
         self.cur = 0
@@ -128,8 +132,14 @@ class PouilleuxScene(Scene):
         self.btn_mode = ui.Button((cx - 230, 478, 460, 46), self._mode_label(),
                                   self._toggle_mode, self.small,
                                   fill=(72, 96, 120), text_col=C.TEXT_LIGHT)
+        self.btn_survival = ui.Button((cx - 230, 532, 460, 46),
+                                      self._survival_label(),
+                                      self._toggle_survival, self.small,
+                                      fill=(72, 96, 120), text_col=C.TEXT_LIGHT)
         self.btn_start = ui.Button((cx - 130, 566, 260, 54), "Commencer",
                                    self.new_game, self.font)
+        self.btn_next = ui.Button((cx - 130, 396, 260, 56), "Manche suivante",
+                                  self._next_round, self.font)
         self.btn_ready = ui.Button((cx - 130, 512, 260, 54), "Prêt",
                                    self._ready_done, self.font)
         self.btn_donner = ui.Button((cx - 130, 512, 260, 54), "Donner",
@@ -154,6 +164,9 @@ class PouilleuxScene(Scene):
     def _mode_label(self):
         return "Automatique" if self.mode == "auto" else "Manuelle"
 
+    def _survival_label(self):
+        return "Survie" if self.survival else "Manche unique"
+
     # ---- écran de config : compartiment, code couleur, titres ----
     def _style_setup_buttons(self):
         BLUE, PURPLE = (70, 108, 158), (132, 96, 168)
@@ -162,7 +175,9 @@ class PouilleuxScene(Scene):
         self.btn_version.label = self._version_label()
         self.btn_mode.fill = GREEN if self.mode == "auto" else ORANGE
         self.btn_mode.label = self._mode_label()
-        for b in (self.btn_version, self.btn_mode):
+        self.btn_survival.fill = BLUE if not self.survival else (196, 110, 78)
+        self.btn_survival.label = self._survival_label()
+        for b in (self.btn_version, self.btn_mode, self.btn_survival):
             b.fill_hover = tuple(min(255, c + 24) for c in b.fill)
             b.text_col = C.TEXT_LIGHT
 
@@ -189,7 +204,8 @@ class PouilleuxScene(Scene):
         # nombre de joueurs (stepper)
         self._texts.append(("Nombre de joueurs", self.small, C.TEXT_LIGHT,
                             (px + pad, y + 14), "left"))
-        self._texts.append(("Vous + IA (2 à 10)", self.dfont, C.TEXT_DIM,
+        floor = 3 if self.survival else 2
+        self._texts.append((f"Vous + IA ({floor} à 10)", self.dfont, C.TEXT_DIM,
                             (px + pad, y + 40), "left"))
         grp = 56 + 80 + 56
         gx = px + pw - pad - grp
@@ -206,13 +222,17 @@ class PouilleuxScene(Scene):
         md = ("Les paires sont écartées automatiquement" if self.mode == "auto"
               else "Vous écartez vous-même vos paires (les IA restent auto)")
         y = self._opt_row(px, pw, y, "Défausse des paires", md, self.btn_mode)
+        self._dividers.append((px + pad, px + pw - pad, y)); y += 14
+        sd = ("Le Pouilleux est éliminé ; on rejoue jusqu'au dernier (min 3)"
+              if self.survival else "Une seule manche : le Pouilleux a perdu")
+        y = self._opt_row(px, pw, y, "Format", sd, self.btn_survival)
         bottom = y + 12
         self._panels.append((pygame.Rect(px, top, pw, bottom - top),
                              "RÉGLAGES DE LA PARTIE", C.ACCENT))
         self.btn_start.rect.update(cx - 130, bottom + 30, 260, 56)
 
     def _dec(self):
-        self.N = max(2, self.N - 1)
+        self.N = max(3 if self.survival else 2, self.N - 1)
 
     def _inc(self):
         self.N = min(10, self.N + 1)
@@ -225,11 +245,20 @@ class PouilleuxScene(Scene):
         self.mode = "manual" if self.mode == "auto" else "auto"
         self.btn_mode.label = self._mode_label()
 
+    def _toggle_survival(self):
+        self.survival = not self.survival
+        if self.survival and self.N < 3:
+            self.N = 3
+        self.btn_survival.label = self._survival_label()
+
     def _cur_buttons(self):
         if self.phase == "setup":
             self._layout_setup()
             return [self.btn_minus, self.btn_plus, self.btn_version,
-                    self.btn_mode, self.btn_start, self.btn_menu]
+                    self.btn_mode, self.btn_survival, self.btn_start,
+                    self.btn_menu]
+        if self.phase == "round_over":
+            return [self.btn_next, self.btn_menu]
         if self.phase == "over":
             return self.over_buttons + [self.btn_menu]
         if self.phase == "ready":
@@ -250,6 +279,17 @@ class PouilleuxScene(Scene):
     # Mise en place
     # ------------------------------------------------------------------
     def new_game(self):
+        """Nouvelle partie complète (remet à zéro le tournoi de survie)."""
+        if self.survival and self.N < 3:
+            self.N = 3
+        self.eliminated = set()
+        self.elim_order = []
+        self.winner = None
+        self._deal_round()
+
+    def _deal_round(self):
+        """Distribue une manche entre les joueurs encore en lice (tous, hors
+        éliminés en mode survie)."""
         deck = [Card(s, r) for s in C.SUITS for r in range(1, 14)]
         if self.version == "classic":
             removed = next(c for c in deck if c.suit == C.CLUB and c.rank == 11)
@@ -261,16 +301,18 @@ class PouilleuxScene(Scene):
 
         random.shuffle(deck)
         self.hands = [[] for _ in range(self.N)]
-        for i, c in enumerate(deck):
-            self.hands[i % self.N].append(c)
+        players = [i for i in range(self.N) if i not in self.eliminated]
+        for k, c in enumerate(deck):
+            self.hands[players[k % len(players)]].append(c)
+        human_manual = (self.mode == "manual" and 0 not in self.eliminated)
         for i, h in enumerate(self.hands):
             # En manuel, l'humain (siège 0) écarte lui-même ses paires initiales.
-            if not (self.mode == "manual" and i == 0):
+            if not (human_manual and i == 0):
                 self._discard_initial(h)
             h.sort(key=self._sort_key)
 
-        self.out_order = [i for i in range(self.N) if not self.hands[i]]
-        self.discard_count = (52 - 1 - sum(len(h) for h in self.hands)) // 2
+        self.out_order = [i for i in players if not self.hands[i]]
+        self.discard_count = (len(deck) - sum(len(h) for h in self.hands)) // 2
         self.flies = []
         self._after = None
         self._discarding = False
@@ -284,16 +326,22 @@ class PouilleuxScene(Scene):
         self.ranking = []
         self._layout_seats()
 
-        if self.mode == "manual":
+        if human_manual:
             # Tout le monde écarte ses paires, puis on clique « Prêt ».
             self.victim = None
             self.cur = 0
             self.phase = "ready"
             return
 
-        active = [i for i in range(self.N) if self.hands[i]]
+        active = [i for i in players if self.hands[i]]
         self.cur = random.choice(active) if active else 0
         self._begin_turn()
+
+    def _next_round(self):
+        """Mode survie : lance la manche suivante avec les joueurs restants."""
+        if self.phase != "round_over":
+            return
+        self._deal_round()
 
     def _ready_done(self):
         """Fin de la mise en place manuelle : on lance la première pioche."""
@@ -579,6 +627,19 @@ class PouilleuxScene(Scene):
 
     def _finish(self, loser):
         self.loser = loser
+        if self.survival and loser is not None:
+            # Le Pouilleux de la manche est éliminé ; on rejoue tant qu'il reste
+            # au moins 2 joueurs, sinon le dernier est le grand gagnant.
+            self.eliminated.add(loser)
+            self.elim_order.append(loser)
+            remaining = [i for i in range(self.N) if i not in self.eliminated]
+            if len(remaining) >= 2:
+                self.phase = "round_over"
+                return
+            self.winner = remaining[0] if remaining else None
+            self.ranking = list(reversed(self.elim_order))
+            self.phase = "over"
+            return
         self.ranking = list(self.out_order)
         if loser is not None and loser not in self.ranking:
             self.ranking.append(loser)
@@ -798,8 +859,28 @@ class PouilleuxScene(Scene):
             self._draw_fly(surface, f)
         for b in self._cur_buttons():
             b.draw(surface)
+        if self.phase == "round_over":
+            self._draw_round_over(surface)
         if self.phase == "over":
             self._draw_over(surface)
+
+    def _draw_round_over(self, surface):
+        veil = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        veil.fill((0, 0, 0, 175))
+        surface.blit(veil, (0, 0))
+        cx = self.cx
+        who = "Vous êtes" if self.loser == 0 else f"{self._name(self.loser)} est"
+        t = self.big.render(f"{who} éliminé !", True, LOSER_COL)
+        surface.blit(t, t.get_rect(center=(cx, 200)))
+        remaining = [i for i in range(self.N) if i not in self.eliminated]
+        s = self.font.render(f"Il reste {len(remaining)} joueur(s)", True,
+                             C.TEXT_LIGHT)
+        surface.blit(s, s.get_rect(center=(cx, 270)))
+        names = ", ".join(self._name(i) for i in remaining)
+        s2 = self.small.render(names, True, C.TEXT_DIM)
+        surface.blit(s2, s2.get_rect(center=(cx, 316)))
+        self.btn_next.draw(surface)
+        self.btn_menu.draw(surface)
 
     def _draw_setup(self, surface):
         cx = self.cx
@@ -883,9 +964,13 @@ class PouilleuxScene(Scene):
                     else (90, 100, 110))
             pygame.draw.rect(surface, edge, r,
                              width=2 if (drawer or vict) else 1, border_radius=10)
-            surface.blit(self.small.render(self._name(seat), True, C.TEXT_LIGHT),
+            elim = seat in self.eliminated
+            surface.blit(self.small.render(self._name(seat), True,
+                         C.TEXT_DIM if elim else C.TEXT_LIGHT),
                          (r.x + 12, r.y + 4))
-            if n == 0:
+            if elim:
+                info, col = "Éliminé", LOSER_COL
+            elif n == 0:
                 info, col = "Sauvé", SAFE_COL
             else:
                 info, col = f"{n} carte(s)", C.TEXT_DIM
@@ -965,7 +1050,9 @@ class PouilleuxScene(Scene):
         pygame.draw.rect(surface, bg, r, border_radius=10)
         pygame.draw.rect(surface, C.ACCENT if drawer else (90, 100, 110), r,
                          width=2 if drawer else 1, border_radius=10)
-        if not self.hands[0] and self.phase != "setup":
+        if 0 in self.eliminated:
+            label, col = "Vous · Éliminé", LOSER_COL
+        elif not self.hands[0] and self.phase != "setup":
             label, col = "Vous · Sauvé", SAFE_COL
         else:
             label, col = "Vous", C.TEXT_LIGHT
@@ -1007,6 +1094,9 @@ class PouilleuxScene(Scene):
         veil.fill((0, 0, 0, 185))
         surface.blit(veil, (0, 0))
         cx = self.cx
+        if self.survival:
+            self._draw_over_survival(surface)
+            return
         if self.loser is None:
             txt, col = "Personne n'est pouilleux !", C.ACCENT
         elif self.loser == 0:
@@ -1030,5 +1120,32 @@ class PouilleuxScene(Scene):
             s = self.font.render(line, True, col)
             surface.blit(s, s.get_rect(center=(cx, y)))
             y += 42
+        for b in self.over_buttons:
+            b.draw(surface)
+
+    def _draw_over_survival(self, surface):
+        """Écran de fin du mode survie : un grand gagnant + ordre d'élimination."""
+        cx = self.cx
+        if self.winner == 0:
+            txt, col = "Vous gagnez la survie !", C.ACCENT
+        elif self.winner is not None:
+            txt, col = f"{self._name(self.winner)} gagne la survie !", C.ACCENT
+        else:
+            txt, col = "Fin de partie", C.TEXT_LIGHT
+        t = self.big.render(txt, True, col)
+        surface.blit(t, t.get_rect(center=(cx, 150)))
+        # classement : gagnant en tête, puis éliminés du dernier au premier
+        order = ([self.winner] if self.winner is not None else []) + \
+            list(reversed(self.elim_order))
+        y = 244
+        for place, seat in enumerate(order):
+            name = self._name(seat)
+            if seat == self.winner:
+                line, col = f"1.  {name} · survivant", SAFE_COL
+            else:
+                line, col = f"{place + 1}.  {name} · éliminé", C.TEXT_DIM
+            s = self.font.render(line, True, col)
+            surface.blit(s, s.get_rect(center=(cx, y)))
+            y += 40
         for b in self.over_buttons:
             b.draw(surface)
